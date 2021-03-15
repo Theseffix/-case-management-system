@@ -1,0 +1,56 @@
+﻿@using ITHSManagement.Models
+@using ITHSManagement.Services
+@inject ProgrammeService programContext
+
+@*<Modal Open="ProgramModalVisible" Size="ModalSize.Medium" Closable="false">
+    <ModalTitle>Redigera Utbildning</ModalTitle>
+    <ModalBody>
+        <EditForm Model="@Programme">
+            <Text @bind-Value="Programme.ProgramName" Label="Utbildningsnamn"></Text>
+            <Text @bind-Value="Programme.YhNumber" Label="YH-Nummer"></Text>
+            <Text @bind-Value="Programme.Description" Label="Beskrivning"></Text>
+            <Text @bind-Value="Programme.CourseAdmin" Label="Utbildningsansvarig"></Text>
+
+            <clr-input-container class="clr-form-control clr-row " blazority="">
+                <label class="clr-control-label clr-col-12 clr-col-md-2" for="clr-date-1">Startdatum</label>
+                <div class="clr-control-container clr-col-md-10 clr-col-12 ">
+                    <InputDate id="clr-date-1" class="clr-input valid" @bind-Value=Programme.StartDate ParsingErrorMessage="Must be a date" />
+                </div>
+            </clr-input-container>
+            <clr-input-container class="clr-form-control clr-row " blazority="">
+                <label class="clr-control-label clr-col-12 clr-col-md-2" for="clr-date-2">Slutdatum</label>
+                <div class="clr-control-container clr-col-md-10 clr-col-12 ">
+                    <InputDate id="clr-date-2" class="clr-input valid" @bind-Value=Programme.EndDate ParsingErrorMessage="Must be a date" />
+                </div>
+            </clr-input-container>
+        </EditForm>
+    </ModalBody>
+    <ModalFooter>
+        <Button Variant="Outline" OnClick="e => EditModal()">Avbryt</Button>
+        <Button Variant="Primary" OnClick="e => { EditModal(); EditProgramme(Programme);}">Spara</Button>
+    </ModalFooter>
+</Modal>*@
+@code {
+
+
+@*    [Parameter]
+    public Programme Programme { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> ProgramModalVisibleChanged { get; set; }
+    [Parameter]
+    public EventCallback<Programme> ProgrammeChanged { get; set; }
+
+    [Parameter]
+    public bool ProgramModalVisible { get; set; }
+
+    async Task EditModal()
+    {
+        ProgramModalVisible = false;
+        await ProgramModalVisibleChanged.InvokeAsync(ProgramModalVisible);
+    }
+    private async Task EditProgramme(Programme programme)
+    {
+        await programContext.Update(programme);
+    }*@
+}

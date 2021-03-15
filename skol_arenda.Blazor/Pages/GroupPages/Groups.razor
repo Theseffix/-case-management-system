@@ -1,0 +1,94 @@
+﻿@page "/groups"
+@using ITHSManagement.Services
+@using ITHSManagement.Models
+@inject NavigationManager NavigationManager
+@inject GroupService context
+
+<h1>Grupper
+    <span style="float:right;"><Button Variant="Primary" @onclick="(() => AddCourseModal = true)">Lägg till grupp</Button></span>
+</h1>
+
+
+@if (groups != null)
+{
+    @if (LastClickedRow != null)
+    {
+        <Alert Type="AlertType.Info" Closable="false">Row (ID: @LastClickedRow.Id, Name: @LastClickedRow.Title) was clicked.</Alert>
+    }
+
+    <Datagrid TRowData="Group" Items="groups" RowClicked="(u) => RowClicked(u)" RowClass="DynamicRowClass" Placeholder="För tillfället är det väldigt tomt här.">
+        <DatagridColumn Title="Id" TRowData="Group" Field="c => c.Id" CanSort="true" />
+        <DatagridColumn Title="Titel" TRowData="Group" Field="c => c.Title" CanSort="true" />
+
+        <DatagridFooter TRowData="Group">
+            <DatagridFooterDescription TRowData="Group">@groups.Count grupper.</DatagridFooterDescription>
+        </DatagridFooter>
+    </Datagrid>
+}
+else
+{
+    <Spinner>Loading...</Spinner>
+}
+
+<Modal Open="AddCourseModal" Closable="false">
+    <ModalTitle>Lägg Till Kurs</ModalTitle>
+    <ModalBody>
+        <EditForm Model="@Group" class="clr-form clr-form-compact">
+            <Text @bind-Value="Group.Title" Label="Gruppnamn"></Text>
+            <Text @bind-Value="Group.Description" Label="Beskrivning"></Text>
+            
+        </EditForm>
+    </ModalBody>
+    <ModalFooter>
+        <Button Variant="Outline" OnClick="UpdateModal">Avbryt</Button>
+        <Button Variant="Primary" OnClick="AddNewGroup">Lägg Till</Button>
+    </ModalFooter>
+</Modal>
+
+
+@code {
+
+    public bool AddCourseModal { get; set; }
+
+    public Group LastClickedRow { get; set; }
+
+    private void UpdateModal()
+    {
+
+        AddCourseModal = false;
+    }
+
+    public void RowClicked(Blazority.Shared.MouseEventData<Group> e)
+    {
+        LastClickedRow = e.Data;
+        NavigationManager.NavigateTo($"group/{e.Data.Id}");
+
+    }
+
+    public string DynamicRowClass(Group row, int index)
+    {
+        // NOTE: row-selected class is a built-in datagrid class
+        return row == LastClickedRow ? "row-selected" : "";
+    }
+
+
+    private Group Group = new Group();
+
+    private List<Group> groups;
+
+    private async Task AddNewGroup()
+    {
+        UpdateModal();
+        await context.Insert(Group);
+        groups = (await context.Get()).ToList();
+        StateHasChanged();
+        Group = new Group();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        groups = (await context.Get()).ToList();
+
+    }
+
+}

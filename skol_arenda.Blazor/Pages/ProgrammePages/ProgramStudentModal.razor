@@ -1,0 +1,191 @@
+@using ITHSManagement.Models
+@using ITHSManagement.Services
+@inject ProgrammeService programContext
+
+@*DENNA ANVÄNDS INTE JUST NU*@
+<Modal Open="ModalStudentVisible" Closable="false">
+    <ModalTitle>Sök Student</ModalTitle>
+    <ModalBody>
+        <input value="@SearchStringStudentStudentStudent" placeholder="Sök.." @oninput="OnStudentSearchChange" />
+        <Tree Selectable="true">
+            @foreach (Student s in searchedStudents)
+            {
+                <TreeNode SelectChanged="() => ToggleSelectedStudent(s)">@s.FirstName</TreeNode>
+            }
+        </Tree>
+    </ModalBody>
+    <ModalFooter>
+        <Button Variant="Outline" OnClick="UpdateStudentModal">AVBRYT</Button>
+        <Button Variant="Primary" OnClick="AddStudentsFromSearch">LÄGG TILL</Button>
+    </ModalFooter>
+</Modal>
+
+<Modal Open="GroupModalVisible" Closable="false">
+    <ModalTitle>Sök Grupper</ModalTitle>
+    <ModalBody>
+        <input value="@GroupSearchString" placeholder="Sök.." @oninput="OnGroupSearchChange" />
+        <Tree Selectable="true">
+            @foreach (Group g in searchedGroups)
+            {
+                <TreeNode SelectChanged="() => ToggleSelectedGroup(g)">@g.Title</TreeNode>
+            }
+
+        </Tree>
+    </ModalBody>
+    <ModalFooter>
+        <Button Variant="Outline" OnClick="UpdateGroupModal">AVBRYT</Button>
+        <Button Variant="Primary" OnClick="AddGroupsToProgram">LÄGG TILL</Button>
+
+    </ModalFooter>
+</Modal>
+
+
+@code {
+    [Parameter]
+    public int ProgrammeId { get; set; }
+
+    [Parameter]
+    public bool ModalStudentVisible { get; set; }
+    [Parameter]
+    public EventCallback<bool> ModalStudentVisibleChanged { get; set; }
+    [Parameter]
+    public EventCallback<List<Student>> studentsChanged { get; set; }
+
+    async Task UpdateStudentModal()
+    {
+        ModalStudentVisible = false;
+        await ModalStudentVisibleChanged.InvokeAsync(ModalStudentVisible);
+    }
+    public string SearchStringStudentStudentStudent { get; set; }
+
+    [Parameter]
+    public List<Student> students { get; set; }
+
+    private Student student = new Student();
+    private List<Student> selectedStudents = new List<Student>();
+    private List<Student> searchedStudents = new List<Student>();
+    private bool searchingStudent;
+    private string lastStudentSearch = "";
+
+
+
+    private async Task OnStudentSearchChange(ChangeEventArgs e)
+    {
+        var search = e.Value?.ToString().ToLower();
+
+        if (search.Length > 2 && !searchingStudent)
+        {
+            searchingStudent = true;
+            searchedStudents = await programContext.SearchStudentByName(search, ProgrammeId);
+        }
+        else if (search.Contains(lastStudentSearch) && searchingStudent)
+        {
+
+            searchedStudents = searchedStudents.Where(x => x.FirstName.ToLower().Contains(search) || x.LastName.ToLower().Contains(search)).ToList();
+            lastStudentSearch = search;
+        }
+        else
+        {
+            searchedStudents.Clear();
+            searchingStudent = false;
+            lastStudentSearch = "";
+        }
+        this.StateHasChanged();
+    }
+
+    private async Task AddStudentsFromSearch()
+    {
+        await programContext.AddStudentsFromSearch(selectedStudents, ProgrammeId);
+        ModalStudentVisible = false;
+        students = await programContext.GetStudentsByProgramId(ProgrammeId);
+        await studentsChanged.InvokeAsync(students);
+        this.StateHasChanged();
+    }
+
+    private async Task AddStudentToProgram()
+    {
+        await programContext.AddedStudentToProgram(student, ProgrammeId);
+    }
+    private async Task SearchStudentByName(string name)
+    {
+        await programContext.SearchStudentByName(name, ProgrammeId);
+
+    }
+    private void ToggleSelectedStudent(Student s)
+    {
+        if (selectedStudents.Exists(x => x.Equals(s)))
+        {
+            selectedStudents.Remove(s);
+        }
+        else
+        {
+            selectedStudents.Add(s);
+        }
+    }
+
+
+    [Parameter]
+    public bool GroupModalVisible { get; set; }
+
+
+    private void UpdateGroupModal()
+    {
+        GroupModalVisible = false;
+    }
+
+    [Parameter]
+    public List<Group> groups { get; set; }
+
+    private Group group = new Group();
+    private List<Group> searchedGroups = new List<Group>();
+    private List<Group> selectedGroups = new List<Group>();
+    public string GroupSearchString { get; set; }
+    private bool searchingGroup;
+    private string lastGroupSearch = "";
+
+
+    private async Task OnGroupSearchChange(ChangeEventArgs e)
+    {
+        var search = e.Value?.ToString().ToLower();
+
+        if (search.Length > 2 && !searchingGroup)
+        {
+            searchingGroup = true;
+            searchedGroups = await programContext.SearchGroupsByName(search);
+            lastGroupSearch = search;
+        }
+        else if (search.Contains(lastGroupSearch) && searchingGroup)
+        {
+
+            searchedGroups = searchedGroups.Where(x => x.Description.ToLower().Contains(search)).ToList();
+            lastGroupSearch = search;
+        }
+        else
+        {
+            searchedGroups.Clear();
+            searchingGroup = false;
+            lastGroupSearch = "";
+        }
+        this.StateHasChanged();
+    }
+    private async Task AddGroupsToProgram()
+    {
+        await programContext.AddGroupsFromSearch(selectedGroups, ProgrammeId);
+        UpdateGroupModal();
+    }
+
+    private void ToggleSelectedGroup(Group g)
+    {
+        if (selectedGroups.Exists(x => x.Equals(g)))
+        {
+            selectedGroups.Remove(g);
+        }
+        else
+        {
+            selectedGroups.Add(g);
+        }
+    }
+}
+
+
+

@@ -1,0 +1,309 @@
+﻿@page "/course/{CourseId:int}"
+@using ITHSManagement.Models
+
+@if (Course != null)
+{
+    <h1>
+        @Course.Id : @Course.CourseName
+
+        <span style="float: right;">
+            <Button Label="Save" hidden="@HiddenSaveButton" OnClick="() => EditCourse()"></Button>
+            <Button Icon="Edit" hidden="@HiddenEditButton" Variant="Primary" OnClick="() => EditCourseButtons()"></Button>
+            <Button Label="TA BORT" Variant="Danger" Icon="warning-standard" OnClick="e => DeleteCourseModal = true"></Button>
+        </span>
+    </h1>
+
+
+    <Modal Open="DeleteCourseModal" Closable="false">
+        <ModalTitle>Bekräfta borttagning</ModalTitle>
+        <ModalBody>
+            <h4>Vill du ta bort @Course.CourseName permanent?</h4>
+        </ModalBody>
+        <ModalFooter>
+            <Button Variant="Danger" OnClick="DeleteModal">Avbryt</Button>
+            <Button Variant="Primary" OnClick="(() => DeleteCourse(CourseId))">Ta bort</Button>
+
+        </ModalFooter>
+    </Modal>
+
+
+    <Card>
+        <CardBody>
+            <Tabs>
+                <Tab>
+                    <Header>Information</Header>
+                    <ChildContent>
+                        <LayoutView>
+
+                            <div style="width:49%;float:right;margin-right:6px;margin-bottom:6px;margin-top:18px;">
+                                <Datagrid TRowData="TaskItem" Items="TaskList" RowClicked="(u) => RowClickedTask(u)" RowClass="DynamicRowClass" Placeholder="För tillfället är det väldigt tomt här.">
+                                    <DatagridColumn Title="Task-Lista" TRowData="TaskItem" Field="c => c.Title" CanSort="true" />
+                                    <DatagridFooter TRowData="TaskItem">
+                                        <DatagridFooterDescription TRowData="TaskItem">@TaskList.Count aktiva Tasks.</DatagridFooterDescription>
+                                    </DatagridFooter>
+                                    <Button style="float:right" OnClick="e => ModalMd = true">+</Button>
+                                </Datagrid>
+                            </div>
+
+                            <cds-divider orientation="Horizontal"></cds-divider>
+
+                            <div cds-layout="Horizontal gap:md" style="width:49%;float:left">
+                                <br />
+                                <cds-textarea>
+                                    <textarea disabled="@EditCourseBool" style="resize:none;margin-left:6px;margin-top:6px;width:95%;height:150px;" @bind="@Course.Description"></textarea>
+                                </cds-textarea>
+                                <br />
+                                <table class="table table-vertical" style="width:95%;margin-left:6px;margin-bottom:6px;">
+                                    <tbody>
+                                        <tr>
+                                            <td style="width:25%">Id</td>
+                                            <td>@Course.Id</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="width:25%">Kurs</td>
+                                            <td>
+                                                <input maxlength="35" type="text" disabled="@EditCourseBool" style="resize:none; height:20px;" @bind="@Course.CourseName"></input>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="width:25%">Kurspoäng</td>
+                                            <td>
+                                                <textarea disabled="@EditCourseBool" style="resize:none; height:20px;" @bind="@Course.Points"></textarea>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="width:25%">Start Datum</td>
+                                            <td>
+                                                <input type="date" disabled="@EditCourseBool" style="resize:none; height:20px" @bind="@Course.StartDate" />
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="width:25%">Slut Datum</td>
+                                            <td>
+                                                <input type="date" disabled="@EditCourseBool" style="resize:none; height:20px" @bind="@Course.EndDate" />
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="width:25%">Kursansvarig</td>
+                                            <td>
+                                                <textarea disabled="@EditCourseBool" style="resize:none; height:20px" @bind="@Course.CourseAdmin"></textarea>
+                                            </td>
+                                        </tr>
+                                        @if (Course.StartDeviation != null)
+                                        {
+                                            <tr>
+                                                <td style="width:25%">Avikande Period</td>
+                                                <td>
+                                                    <textarea disabled="@EditCourseBool" style="resize:none; height:20px" @bind="@Course.DeviationDescription"></textarea>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="width:25%">Start Datum</td>
+                                                <td>
+                                                    <input type="date" disabled="@EditCourseBool" style="resize:none; height:20px" @bind="@Course.StartDeviation" />
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="width:25%">Slut Datum</td>
+                                                <td>
+                                                    <input type="date" disabled="@EditCourseBool" style="resize:none; height:20px" @bind="@Course.EndDeviation" />
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </LayoutView>
+                    </ChildContent>
+                </Tab>
+                <Tab>
+                    <Header><span @onclick="() => GetStudents()">Studenter</span></Header>
+                    <ChildContent>
+                        <Button OnClick="e => StudentModalVisible = true">Lägg Till Student</Button>
+                        <Datagrid TRowData="Student" Items="students" Placeholder="För tillfället är det väldigt tomt här.">
+                            <DatagridColumn Title="Id" TRowData="Student" Field="c => c.Id" CanSort="true" />
+                            <DatagridColumn Title="Förnamn" TRowData="Student" Field="c => c.FirstName" CanSort="true" />
+                            <DatagridColumn Title="Efternamn" TRowData="Student" Field="c => c.LastName" CanSort="true" />
+                            <DatagridColumn Title="Födelseår" TRowData="Student">@context.Birthdate?.ToShortDateString() </DatagridColumn>
+                            <DatagridColumn Title="" TRowData="Student">
+                                <ButtonGroup Variant="Primary" Small="true">
+                                    <Button Variant="Primary" OnClick="() => NavigateToStudent(context)">PROFIL</Button>
+                                    <Button Variant="Danger" OnClick="()  => RemoveStudentFromProgram(context)">TA BORT</Button>
+                                </ButtonGroup>
+                            </DatagridColumn>
+                            <DatagridFooter TRowData="Student">
+                                <DatagridFooterDescription TRowData="Student">@students.Count studenter.</DatagridFooterDescription>
+                            </DatagridFooter>
+                        </Datagrid>
+                    </ChildContent>
+                </Tab>
+                <Tab>
+                    <Header><span @onclick="() => GetProgrammes()">Utbildning</span></Header>
+                    <ChildContent>
+                        <Button OnClick="e => ProgramModalVisible = true">Lägg Till Utbildning</Button>
+                        <Datagrid TRowData="Programme" Items="programmes" Placeholder="För tillfället är det väldigt tomt här.">
+                            <DatagridColumn Title="Id" TRowData="Programme" Field="c => c.Id" CanSort="true" />
+                            <DatagridColumn Title="Titel" TRowData="Programme" Field="c => c.ProgramName" CanSort="true" />
+                            <DatagridColumn Title="Poäng" TRowData="Programme" Field="c => c.YhNumber" CanSort="true" />
+                            <DatagridColumn Title="Startdatum" TRowData="Programme">@context.StartDate?.ToShortDateString()</DatagridColumn>
+                            <DatagridColumn Title="" TRowData="Programme">
+                                <ButtonGroup Variant="Primary" Small="true">
+                                    <Button Variant="Primary" OnClick="() => NavigateToProgram(context)">PROFIL</Button>
+                                    <Button Variant="Danger" OnClick="() => RemoveProgrammeFromCourse(context.Id)">TA BORT</Button>
+                                </ButtonGroup>
+                            </DatagridColumn>
+                            <DatagridFooter TRowData="Programme">
+                                <DatagridFooterDescription TRowData="Programme">@programmes.Count kurser.</DatagridFooterDescription>
+                            </DatagridFooter>
+                        </Datagrid>
+                    </ChildContent>
+                </Tab>
+                <Tab>
+                    <Header><span @onclick="() => GetGroups()">Grupper</span></Header>
+                    <ChildContent>
+                        <Datagrid TRowData="Group" Items="groups" Placeholder="För tillfället är det väldigt tomt här.">
+                            <DatagridColumn Title="Id" TRowData="Group" Field="c => c.Id" CanSort="true" />
+                            <DatagridColumn Title="Titel" TRowData="Group" Field="c => c.Title" CanSort="true" />
+                            <DatagridColumn Title="Beskrivning" TRowData="Group" Field="c => c.Description" CanSort="true" />
+                            <DatagridFooter TRowData="Group">
+                                <DatagridFooterDescription TRowData="Group">@groups.Count kurser.</DatagridFooterDescription>
+                            </DatagridFooter>
+                        </Datagrid>
+                    </ChildContent>
+                </Tab>
+                <Tab>
+                    <Header><span @onclick="() => GetCompanyReps()">Intressenter</span></Header>
+                    <ChildContent>
+                        <Button OnClick="e => CrModalVisible = true">Lägg Till Intressent</Button>
+                        <Datagrid TRowData="CompRep" Items="companyreps" Placeholder="För tillfället är det väldigt tomt här.">
+                            <DatagridColumn Title="Förnamn" TRowData="CompRep" Field="c => c.FirstName" CanSort="true" />
+                            <DatagridColumn Title="Efternamn" TRowData="CompRep" Field="c => c.LastName" CanSort="true" />
+                            <DatagridColumn Title="" TRowData="CompRep">
+                                <ButtonGroup Variant="Primary" Small="true">
+                                    <Button Variant="Primary">Profil</Button>
+                                    @*Finns ingen view för intressent*@
+                                    <Button Variant="Danger" OnClick="()  => RemoveCompRepFromCourse(context)">Ta bort</Button>
+                                </ButtonGroup>
+                            </DatagridColumn>
+                            <DatagridFooter TRowData="CompRep">
+                                <DatagridFooterDescription TRowData="CompRep">@companyreps.Count intressenter.</DatagridFooterDescription>
+                            </DatagridFooter>
+                        </Datagrid>
+                    </ChildContent>
+                </Tab>
+            </Tabs>
+            <div style="height:1000px"></div>
+        </CardBody>
+    </Card>
+
+    <Modal Open="ModalMd" Closable="false" StaticBackdrop="true">
+        <ModalTitle>Skapa Nytt Ärende</ModalTitle>
+        <ModalBody>
+            <Form style="width:100%" Model="@model">
+                <table style="width:100%">
+                    <tr>
+                        <td><h5 style="align-self:start;" class=".p4">Titel</h5></td>
+                    </tr>
+                    <tr>
+                        <td style="width:100%" colspan="2" align="center">
+                            <Text maxlength="35" style="width:100%" @bind-Value="model.Title" />
+                        </td>
+                    </tr>
+                    <tr margin-bottom:20px>
+                        <td>
+                            <h5 class=".p4">Startdatum</h5>
+                            <input type="date" @bind="model.StartDate" />
+                        </td>
+                        <td>
+                            <h5 class=".p4">Slutdatum</h5>
+                            <input type="date" @bind="model.EndDate" />
+                        </td>
+                    </tr>
+                    <tr margin-bottom:500px>
+                        <td>
+                            <h5 class=".p4">Prioritet</h5>
+                            <Combobox Items="@priorities" @bind-SelectedItem="selectedPriority">
+                            </Combobox>
+                        </td>
+                        <td>
+                            <h5 class=".p4">Konsekvens</h5>
+                            <Combobox Items="@consequences" @bind-SelectedItem="selectedConsequence">
+                            </Combobox>
+                        </td>
+                    </tr>
+                </table>
+                <h5 class=".p4">Beskrivning</h5>
+                <Textarea @bind-Value="model.Description" style="resize:none;height:200px;width:100%">...</Textarea>
+            </Form>
+        </ModalBody>
+
+        <ModalFooter>
+            <Button Variant="Outline" OnClick="e => ModalMd = false">AVBRYT</Button>
+            <Button Variant="Primary" OnClick="e => AddTask()">SKAPA</Button>
+        </ModalFooter>
+    </Modal>
+
+
+}
+else
+{
+    <div class="loader">
+        <h3>Loading</h3>
+        <Spinner Size="SpinnerSize.Large">Loading...</Spinner>
+    </div>
+
+}
+
+<Modal Open="StudentModalVisible" Closable="false">
+    <ModalTitle>Sök Student</ModalTitle>
+    <ModalBody>
+        <input value="@SearchStringStudentStudentStudent" placeholder="Sök.." @oninput="OnStudentSearchChange" />
+        <Tree Selectable="true">
+            @foreach (Student s in searchedStudents)
+            {
+                <TreeNode SelectChanged="() => ToggleSelectedStudent(s)">@s.FirstName @s.LastName</TreeNode>
+            }
+        </Tree>
+    </ModalBody>
+    <ModalFooter>
+        <Button Variant="Outline" OnClick="UpdateStudentModal">Avbryt</Button>
+        <Button Variant="Primary" OnClick="AddStudentsFromSearch">Lägg Till</Button>
+    </ModalFooter>
+</Modal>
+<Modal Open="ProgramModalVisible" Closable="false">
+    <ModalTitle>Sök Utbildning</ModalTitle>
+    <ModalBody>
+        <input value="@SearchProgrammeString" placeholder="Sök.." @oninput="OnProgramSearchChange" />
+        <Tree Selectable="true">
+            @foreach (Programme p in searchedProgramme)
+            {
+                <TreeNode SelectChanged="() => ToggleSelectedProgram(p)">@p.ProgramName</TreeNode>
+            }
+        </Tree>
+    </ModalBody>
+    <ModalFooter>
+        <Button Variant="Outline" OnClick="UpdateProgramModal">Avbryt</Button>
+        <Button Variant="Primary" OnClick="AddProgramsFromSearch">Lägg Till</Button>
+    </ModalFooter>
+</Modal>
+
+<Modal Open="CrModalVisible" Closable="false">
+    <ModalTitle>Sök Intressent</ModalTitle>
+    <ModalBody>
+        <input value="@crSearchString" placeholder="Sök.." @oninput="OnCrSearchChange" />
+        <Tree Selectable="true">
+            @foreach (CompRep c in searchedCompReps)
+            {
+                <TreeNode SelectChanged="() => ToggleSelectedCompRep(c)">@c.FirstName @c.LastName</TreeNode>
+            }
+
+        </Tree>
+    </ModalBody>
+    <ModalFooter>
+        <Button Variant="Outline" OnClick="(() => CrModalVisible = false)">Avbryt</Button>
+        <Button Variant="Primary" OnClick="AddCompRepsFromSearch">Lägg Till</Button>
+
+    </ModalFooter>
+</Modal>
+
+

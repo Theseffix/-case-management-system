@@ -1,0 +1,138 @@
+﻿@page "/group/{GroupId:int}"
+@using ITHSManagement.Models
+
+@if (Group != null)
+{
+    <h1>
+        @Group.Id : @Group.Title
+
+        <span style="float: right;">
+            <Button Label="Save" hidden="@HiddenSaveButton" OnClick="() => EditGroup()"></Button>
+            <Button Icon="Edit" hidden="@HiddenEditButton" Variant="Primary" OnClick="() => EditGroupButtons()"></Button>
+            <Button Label="TA BORT" Variant="Danger" Icon="warning-standard" OnClick="e => DeleteGroupModal = true"></Button>
+        </span>
+    </h1>
+
+
+    <Modal Open="DeleteGroupModal" Closable="false">
+        <ModalTitle>Bekräfta borttagning</ModalTitle>
+        <ModalBody>
+            <h4>Vill du ta bort @Group.Title permanent?</h4>
+        </ModalBody>
+        <ModalFooter>
+            <Button Variant="Danger" OnClick="DeleteModal">Avbryt</Button>
+            <Button Variant="Primary" OnClick="(() => DeleteGroup(GroupId))">Ta bort</Button>
+
+        </ModalFooter>
+    </Modal>
+
+
+    <Card>
+        <CardBody>
+            <Tabs>
+                <Tab>
+                    <Header>Information</Header>
+                    <ChildContent>
+                        <LayoutView>
+
+                            <div style="width:49%;float:right;margin-right:6px;margin-bottom:6px;margin-top:18px;">
+                                <Datagrid TRowData="TaskItem" Items="TaskList" RowClicked="(u) => RowClickedTask(u)" RowClass="DynamicRowClass" Placeholder="För tillfället är det väldigt tomt här.">
+                                    <DatagridColumn Title="Task-Lista" TRowData="TaskItem" Field="c => c.Title" CanSort="true" />
+                                    <DatagridFooter TRowData="TaskItem">
+                                        <DatagridFooterDescription TRowData="TaskItem">@TaskList.Count aktiva Tasks.</DatagridFooterDescription>
+                                    </DatagridFooter>
+                                    <Button style="float:right" OnClick="e => ModalMd = true">+</Button>
+                                </Datagrid>
+                            </div>
+
+                            <cds-divider orientation="Horizontal"></cds-divider>
+
+                            <div cds-layout="Horizontal gap:md" style="width:49%;float:left">
+                                <br />
+                                <cds-textarea>
+                                    <textarea disabled="@EditGroupBool" style="resize:none;margin-left:6px;margin-top:6px;width:95%;height:150px;" @bind="@Group.Description"></textarea>
+                                </cds-textarea>
+                                <br />
+                                <table class="table table-vertical" style="width:95%;margin-left:6px;margin-bottom:6px;">
+                                    <tbody>
+                                        <tr>
+                                            <td style="width:25%">Id</td>
+                                            <td>@Group.Id</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="width:25%">Grupp</td>
+                                            <td>
+                                                <input maxlength="35" type="text" disabled="@EditGroupBool" style="resize:none; height:20px;" @bind="@Group.Title"></input>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </LayoutView>
+                    </ChildContent>
+                </Tab>
+
+            </Tabs>
+            <div style="height:1000px"></div>
+        </CardBody>
+    </Card>
+
+    <Modal Open="ModalMd" Closable="false" StaticBackdrop="true">
+        <ModalTitle>Skapa Nytt Ärende</ModalTitle>
+        <ModalBody>
+            <Form style="width:100%" Model="@model">
+                <table style="width:100%">
+                    <tr>
+                        <td><h5 style="align-self:start;" class=".p4">Titel</h5></td>
+                    </tr>
+                    <tr>
+                        <td style="width:100%" colspan="2" align="center">
+                            <Text maxlength="35" style="width:100%" @bind-Value="model.Title" />
+                        </td>
+                    </tr>
+                    <tr margin-bottom:20px>
+                        <td>
+                            <h5 class=".p4">Startdatum</h5>
+                            <input type="date" @bind="model.StartDate" />
+                        </td>
+                        <td>
+                            <h5 class=".p4">Slutdatum</h5>
+                            <input type="date" @bind="model.EndDate" />
+                        </td>
+                    </tr>
+                    <tr margin-bottom:500px>
+                        <td>
+                            <h5 class=".p4">Prioritet</h5>
+                            <Combobox Items="@priorities" @bind-SelectedItem="selectedPriority">
+                            </Combobox>
+                        </td>
+                        <td>
+                            <h5 class=".p4">Konsekvens</h5>
+                            <Combobox Items="@consequences" @bind-SelectedItem="selectedConsequence">
+                            </Combobox>
+                        </td>
+                    </tr>
+                </table>
+                <h5 class=".p4">Beskrivning</h5>
+                <Textarea @bind-Value="model.Description" style="resize:none;height:200px;width:100%">...</Textarea>
+            </Form>
+        </ModalBody>
+
+        <ModalFooter>
+            <Button Variant="Outline" OnClick="e => ModalMd = false">AVBRYT</Button>
+            <Button Variant="Primary" OnClick="e => AddTask()">SKAPA</Button>
+        </ModalFooter>
+    </Modal>
+
+
+}
+else
+{
+    <div class="loader">
+        <h3>Loading</h3>
+        <Spinner Size="SpinnerSize.Large">Loading...</Spinner>
+    </div>
+
+}
+
+

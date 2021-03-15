@@ -1,0 +1,83 @@
+﻿@typeparam TItem
+@using System.Reflection
+@using System 
+@inject NavigationManager NavigationManager
+
+
+@if (Items != null && Items.Count > 0)
+{
+    <table class="table">
+        <thead class="thead-dark">
+            <tr>
+                @foreach (var member in memberInfo)
+                {
+                    @if (member.MemberType == MemberTypes.Property && !ExcludeColumnsCsv.Contains(member.Name))
+                    {
+                        <th scope="col">
+                            @member.Name
+                        </th>
+                    }
+                }
+                @if(NavigationLink != null) {
+                <th>Options</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Items)
+            {
+            <tr>
+                @foreach (var member in memberInfo)
+                {
+                    @if (member.MemberType == MemberTypes.Property && !ExcludeColumnsCsv.Contains(member.Name))
+                    {
+                        <td>
+                            @item.GetType().GetProperty(member.Name).GetValue(item)
+                        </td>
+
+                    }
+                }
+                @if (NavigationLink != null) { 
+                <td>
+                    <button @onclick="() => NavigateRow(item)" class="oi oi-cog btn btn-secondary"></button>
+                </td>
+                }
+            </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+
+    [Parameter]
+    public List<TItem> Items { get; set; }
+    MemberInfo[] memberInfo;
+
+    [Parameter]
+    public string ExcludeColumnsCsv { get; set; }
+    [Parameter]
+    public string NavigationLink { get; set; }
+
+    private void NavigateRow(TItem item)
+    {
+        if(NavigationLink != null) {
+            var id = item.GetType().GetProperty("Id").GetValue(item);
+            NavigationManager.NavigateTo(NavigationLink + id.ToString());
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+
+        base.OnParametersSet();
+
+        if (Items != null && Items.Count > 0)
+        {
+            Type typeofItem = this.Items.First().GetType();
+            memberInfo = typeofItem.GetMembers();
+        }
+
+    }
+
+}

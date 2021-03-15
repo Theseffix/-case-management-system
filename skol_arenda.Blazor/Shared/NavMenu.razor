@@ -1,0 +1,76 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@using ITHSManagement.Models
+@using ITHSManagement.Services;
+@inject TaskRepository taskDb
+@inject UserManager<IdentityUser> _UserManager
+@inject RoleManager<IdentityRole> _RoleManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<nav class="sidenav clr-nav-level-2">
+    <div class="sidenav-content">
+
+        <a class="nav-link" href="Index" Match="aMatch.All">
+            <span class="oi oi-home"></span> Hem
+        </a>
+        <a class="nav-link" href="fetchtask">
+            <span class="oi oi-grid-three-up"></span> Ärenden (@TaskCount)
+        </a>
+        <a class="nav-link" href="fetchstudent">
+            <span class="oi oi-people"></span> Studenter
+        </a>
+
+        <a class="nav-link" href="showprograms">
+            <span class="oi oi-book"></span> Utbildning
+        </a>
+
+        <a class="nav-link" href="courses">
+            <span class="oi oi-book"></span> Kurser
+        </a>
+
+        <a class="nav-link" href="groups">
+            <span class="oi oi-book"></span> Grupper
+        </a>
+        <AuthorizeView>
+            <Authorized>
+                @if (@context.User.IsInRole(ADMINISTRATION_ROLE))
+                {
+                    <a class="nav-link" href="admin">
+                        Admin
+                    </a>
+                }
+
+            </Authorized>
+        </AuthorizeView>
+
+
+    </div>
+
+</nav>
+
+
+@code {
+    private bool collapseNavMenu = true;
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+    [Parameter]
+    public int TaskCount { get; set; }
+
+    private List<TaskItem> tasks = new List<TaskItem>();
+
+    private string NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+    string ADMINISTRATION_ROLE = "root";
+    System.Security.Claims.ClaimsPrincipal CurrentUser;
+
+    protected override async Task OnInitializedAsync()
+    {
+        CurrentUser = (await authenticationStateTask).User;
+        tasks = (await taskDb.Get()).ToList();
+        TaskCount = tasks.Count();
+    }
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+}

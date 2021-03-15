@@ -1,0 +1,92 @@
+﻿@using ITHSManagement.Models
+@using ITHSManagement.Services
+@inject ProgrammeService programContext
+
+<Modal Open="CourseModalVisible" Closable="false">
+    <ModalTitle>Sök Kurser</ModalTitle>
+    <ModalBody>
+        <input value="@SearchCourseString" placeholder="Sök.." @oninput="OnCourseSearchChange" />
+        <Tree Selectable="true">
+            @foreach (Course c in searchedCourses)
+            {
+                <TreeNode SelectChanged="() => ToggleSelectedCourse(c)">@c.CourseName</TreeNode>
+            }
+
+        </Tree>
+    </ModalBody>
+    <ModalFooter>
+        <Button Variant="Outline" OnClick="UpdateCourseModal">Avbryt</Button>
+        <Button Variant="Primary" OnClick="AddCoursesToProgram">Lägg Till</Button>
+
+    </ModalFooter>
+</Modal>
+
+
+
+@code {
+    [Parameter]
+    public int ProgrammeId { get; set; }
+    [Parameter]
+    public bool CourseModalVisible { get; set; }
+    [Parameter]
+    public EventCallback<bool> CourseModalVisibleChanged { get; set; }
+
+    async Task UpdateCourseModal()
+    {
+        CourseModalVisible = false;
+        await CourseModalVisibleChanged.InvokeAsync(CourseModalVisible);
+    }
+
+    [Parameter]
+    public List<Course> courses { get; set; }
+
+    private Course course = new Course();
+    private List<Course> searchedCourses = new List<Course>();
+    private List<Course> selectedCourses = new List<Course>();
+    public string SearchCourseString { get; set; }
+    private bool searchingCourse;
+    private string lastCourseSearch = "";
+
+
+    private async Task OnCourseSearchChange(ChangeEventArgs e)
+    {
+        var search = e.Value?.ToString().ToLower();
+
+        if (search.Length > 2 && !searchingCourse)
+        {
+            searchingCourse = true;
+            searchedCourses = await programContext.SearchCoursesByName(search, ProgrammeId);
+            lastCourseSearch = search;
+        }
+        else if (search.Contains(lastCourseSearch) && searchingCourse)
+        {
+
+            searchedCourses = searchedCourses.Where(x => x.CourseName.ToLower().Contains(search)).ToList();
+            lastCourseSearch = search;
+        }
+        else
+        {
+            searchedCourses.Clear();
+            searchingCourse = false;
+            lastCourseSearch = "";
+        }
+        this.StateHasChanged();
+    }
+    private async Task AddCoursesToProgram()
+    {
+        await programContext.AddCoursesFromSearch(selectedCourses, ProgrammeId);
+        await UpdateCourseModal();
+    }
+
+    private void ToggleSelectedCourse(Course c)
+    {
+        if (selectedCourses.Exists(x => x.Equals(c)))
+        {
+            selectedCourses.Remove(c);
+        }
+        else
+        {
+            selectedCourses.Add(c);
+        }
+    }
+}

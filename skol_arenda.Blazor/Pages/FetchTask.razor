@@ -1,0 +1,60 @@
+﻿@page "/fetchTask"
+
+@using ITHSManagement.Models
+@using ITHSManagement.Services;
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Hosting
+@using Microsoft.AspNetCore.Components.Forms
+@using System.IO;
+@inject TaskRepository taskDb
+@inject IWebHostEnvironment env
+@inject NavigationManager NavigationManager
+
+
+<h1>Ärenden</h1>
+
+
+<Datagrid TRowData="TaskItem" Items="tasks" RowClicked="(u) => RowClicked(u)" RowClass="DynamicRowClass" Placeholder="För tillfället är det väldigt tomt här.">
+    <DatagridColumn Title="Id" TRowData="TaskItem" Field="c => c.Id" CanSort="true" />
+    <DatagridColumn Title="Titel" TRowData="TaskItem" Field="c => c.Title" CanSort="true" />
+    <DatagridColumn Title="Startdatum" TRowData="TaskItem" Field="c => c.StartDate.ToShortDateString()" CanSort="true" />
+    <DatagridColumn Title="Slutdatum" TRowData="TaskItem" Field="c => c.EndDate.ToShortDateString()" CanSort="true" />
+    <DatagridFooter TRowData="TaskItem">
+        <DatagridFooterDescription TRowData="TaskItem">@tasks.Count ärenden.</DatagridFooterDescription>
+    </DatagridFooter>
+</Datagrid>
+
+
+@code {
+
+
+    public void RowClicked(Blazority.Shared.MouseEventData<TaskItem> e)
+    {
+        LastClickedRow = e.Data;
+        NavigationManager.NavigateTo($"taskprofile/{e.Data.Id}");
+    }
+
+    private List<TaskItem> tasks = new List<TaskItem>();
+    private TaskItem task = new TaskItem();
+
+
+    private async Task GetTasks()
+    {
+        tasks = (await taskDb.Get()).ToList();
+        this.StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetTasks();
+
+    }
+
+    public TaskItem LastClickedRow { get; set; }
+
+    public string DynamicRowClass(TaskItem row, int index)
+    {
+        // NOTE: row-selected class is a built-in datagrid class
+        return row == LastClickedRow ? "row-selected" : "";
+    }
+}

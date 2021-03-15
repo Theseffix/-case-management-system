@@ -1,0 +1,98 @@
+﻿@using ITHSManagement.Services
+@using ITHSManagement.Models
+@inject ProgrammeService programContext
+
+<Modal Open="CrModalVisible" Closable="false">
+    <ModalTitle>Sök Intressent</ModalTitle>
+    <ModalBody>
+        <input value="@crSearchString" placeholder="Sök.." @oninput="OnCrSearchChange" />
+        <Tree Selectable="true">
+            @foreach (CompRep c in searchedCompReps)
+            {
+                <TreeNode SelectChanged="() => ToggleSelectedCompRep(c)">@c.FirstName</TreeNode>
+            }
+
+        </Tree>
+    </ModalBody>
+    <ModalFooter>
+        <Button Variant="Outline" OnClick="UpdateCrModal">Avbryt</Button>
+        <Button Variant="Primary" OnClick="AddCompRepsFromSearch">Lägg Till</Button>
+
+    </ModalFooter>
+</Modal>
+
+@code {
+    [Parameter]
+    public int ProgrammeId { get; set; }
+
+    [Parameter]
+    public bool CrModalVisible { get; set; }
+    [Parameter]
+    public EventCallback<bool> CrModalVisibleChanged { get; set; }
+
+    async Task UpdateCrModal()
+    {
+        CrModalVisible = false;
+        await CrModalVisibleChanged.InvokeAsync(CrModalVisible);
+    }
+    public string crSearchString { get; set; }
+
+    [Parameter]
+    public List<CompRep> CompReps { get; set; }
+
+    private CompRep compRep = new CompRep();
+    private List<CompRep> selectedCompReps = new List<CompRep>();
+    private List<CompRep> searchedCompReps = new List<CompRep>();
+    private bool searchingCr;
+    private string lastCrSearch = "";
+
+
+
+    private async Task OnCrSearchChange(ChangeEventArgs e)
+    {
+        var search = e.Value?.ToString().ToLower();
+
+        if (search.Length > 2 && !searchingCr)
+        {
+            searchingCr = true;
+            searchedCompReps = await programContext.SearchCompRepByName(search);
+            lastCrSearch = search;
+        }
+        else if (search.Contains(lastCrSearch) && searchingCr)
+        {
+
+            searchedCompReps = searchedCompReps.Where(x => x.FirstName.ToLower().Contains(search) || x.LastName.ToLower().Contains(search)).ToList();
+            lastCrSearch = search;
+        }
+        else
+        {
+            searchedCompReps.Clear();
+            searchingCr = false;
+            lastCrSearch = "";
+        }
+        this.StateHasChanged();
+    }
+
+    private async Task AddCompRepsFromSearch()
+    {
+        await programContext.AddCompRepsFromSearch(selectedCompReps, ProgrammeId);
+        CrModalVisible = false;
+    }
+
+    private async Task SearchCompRepByName(string name)
+    {
+        await programContext.SearchCompRepByName(name);
+
+    }
+    private void ToggleSelectedCompRep(CompRep s)
+    {
+        if (selectedCompReps.Exists(x => x.Equals(s)))
+        {
+            selectedCompReps.Remove(s);
+        }
+        else
+        {
+            selectedCompReps.Add(s);
+        }
+    }
+}

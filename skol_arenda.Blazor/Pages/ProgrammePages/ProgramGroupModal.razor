@@ -1,0 +1,90 @@
+﻿@using ITHSManagement.Models
+@using ITHSManagement.Services
+@inject ProgrammeService programContext
+
+<Modal Open="GroupModalVisible" Closable="false">
+    <ModalTitle>Sök Grupper</ModalTitle>
+    <ModalBody>
+        <input value="@GroupSearchString" placeholder="Sök.." @oninput="OnGroupSearchChange" />
+        <Tree Selectable="true">
+            @foreach (Group g in searchedGroups)
+            {
+                <TreeNode SelectChanged="() => ToggleSelectedGroup(g)">@g.Title</TreeNode>
+            }
+        </Tree>
+    </ModalBody>
+    <ModalFooter>
+        <Button Variant="Outline" OnClick="UpdateGroupModal">Avbryt</Button>
+        <Button Variant="Primary" OnClick="AddGroupsToProgram">Lägg Till</Button>
+    </ModalFooter>
+</Modal>
+
+
+
+@code {
+    [Parameter]
+    public int ProgrammeId { get; set; }
+    [Parameter]
+    public bool GroupModalVisible { get; set; }
+    [Parameter]
+    public EventCallback<bool> GroupModalVisibleChanged { get; set; }
+
+    async Task UpdateGroupModal()
+    {
+        GroupModalVisible = false;
+        await GroupModalVisibleChanged.InvokeAsync(GroupModalVisible);
+    }
+
+    [Parameter]
+    public List<Group> groups { get; set; }
+
+    private Group group = new Group();
+    private List<Group> searchedGroups = new List<Group>();
+    private List<Group> selectedGroups = new List<Group>();
+    public string GroupSearchString { get; set; }
+    private bool searchingGroup;
+    private string lastGroupSearch = "";
+
+
+    private async Task OnGroupSearchChange(ChangeEventArgs e)
+    {
+        var search = e.Value?.ToString().ToLower();
+
+        if (search.Length > 2 && !searchingGroup)
+        {
+            searchingGroup = true;
+            searchedGroups = await programContext.SearchGroupsByName(search);
+            lastGroupSearch = search;
+        }
+        else if (search.Contains(lastGroupSearch) && searchingGroup)
+        {
+
+            searchedGroups = searchedGroups.Where(x => x.Description.ToLower().Contains(search)).ToList();
+            lastGroupSearch = search;
+        }
+        else
+        {
+            searchedGroups.Clear();
+            searchingGroup = false;
+            lastGroupSearch = "";
+        }
+        this.StateHasChanged();
+    }
+    private async Task AddGroupsToProgram()
+    {
+        await programContext.AddGroupsFromSearch(selectedGroups, ProgrammeId);
+        await UpdateGroupModal();
+    }
+
+    private void ToggleSelectedGroup(Group g)
+    {
+        if (selectedGroups.Exists(x => x.Equals(g)))
+        {
+            selectedGroups.Remove(g);
+        }
+        else
+        {
+            selectedGroups.Add(g);
+        }
+    }
+}

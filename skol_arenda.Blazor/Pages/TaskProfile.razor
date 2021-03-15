@@ -1,0 +1,526 @@
+﻿@page "/taskprofile/{Id:int}"
+@using ITHSManagement.Data
+@using ITHSManagement.Models
+@using ITHSManagement.Services;
+@using System.IO;
+@inject TaskCommentRepository TaskCommentDb
+@inject TaskRepository TaskDb
+@inject TodoRepository TodoDb
+@inject FileIO context
+@inject NavigationManager NavigationManager
+
+
+<h3>
+    <label style="vertical-align:middle;" for="Title">@taskItem.Id-@taskItem.UpdateCount : @taskItem.Title</label>
+
+    <Button style="float:right;margin-left:10px;margin-top:-6px" Label="TA BORT" Variant="Danger" Icon="warning-standard" OnClick="a => ModalMd=true"></Button>
+    <Button style="float:right;margin-left:10px;margin-top:-6px" hidden="@HiddenEditButtonTask" Icon="Edit" Variant="Primary" OnClick="a => EditTask()"></Button>
+    <Button style="float:right;margin-left:10px;margin-top:-6px" hidden="@DisableEditTask" Label="SPARA" Outline="true" Variant="Success" OnClick="a => SaveTask()"></Button>
+    <Button style="float:right;margin-left:10px;margin-top:-6px" disabled="@HiddenEditButtonTask" hidden="@ClosedButtonTask" Icon="check" Variant="Success" OnClick="a => CloseOrReopenTask()"></Button>
+    <Button style="float:right;margin-left:10px;margin-top:-6px" disabled="@HiddenEditButtonTask" hidden="@ReopenButtonTask" Icon="refresh" Variant="Primary" OnClick="a => CloseOrReopenTask()"></Button>
+
+    @if (taskItem.PersonId != null)
+    {
+        <a href="/studentprofile/@taskItem.PersonId" style="vertical-align:middle;margin-right:30%;float:right;" for="Title">@ownerEntityName </a>
+    }
+    else if (taskItem.ProgrammeId != null)
+    {
+        <a href="/programme/@taskItem.ProgrammeId" style="vertical-align:middle;margin-right:30%;float:right;" for="Title">@ownerEntityName </a>
+    }
+    else if (taskItem.CourseId != null)
+    {
+        <a href="/course/@taskItem.CourseId" style="vertical-align:middle;margin-right:30%;float:right;" for="Title">@ownerEntityName </a>
+    }
+    else
+    {
+        <label style="vertical-align:middle;margin-right:30%;float:right;">Nått gick snett!</label>
+    }
+    <label style="float:right;vertical-align:middle;margin-right:5px">Tillhör: </label>
+</h3>
+
+<Modal Open="ModalMd" Closable="false" StaticBackdrop="true">
+    <ModalTitle>Vill du ta bort detta ärende?</ModalTitle>
+    <ModalFooter>
+        <Button Variant="Outline" OnClick="e => ModalMd = false">AVBRYT</Button>
+        <Button Variant="Danger" Icon="warning-standard" OnClick="e => DeleteTask()">TA BORT</Button>
+    </ModalFooter>
+</Modal>
+
+<Card>
+    <CardBody>
+        <Tabs>
+            <Tab>
+                <Header>Information</Header>
+                <ChildContent>
+                    <LayoutView>
+                        <div style="width:49%;float:right;margin-right:6px;margin-bottom:6px;margin-top:12px;">
+                            <br />
+                            <Datagrid TRowData="TaskComment" Items="taskCommentList" style="height: 400px" Placeholder="För tillfället är det väldigt tomt här.">
+                                <DatagridColumn Title="Kommentarer" TRowData="TaskComment" Field="u=> u.Comment" CanSort="false" />
+                                <DatagridColumn Title="Datum" TRowData="TaskComment" Field="u=> u.CreationDate.ToShortDateString()" CanSort="false" />
+                                <DatagridColumn Title="Tid" TRowData="TaskComment" Field="u=> u.CreationDate.ToShortTimeString()" CanSort="false" />
+                            </Datagrid>
+                                <DatagridFooter TRowData="TaskComment">
+                                    <DatagridFooterDescription TRowData="TaskComment">@taskCommentList.Count kommentarer.</DatagridFooterDescription>
+                                </DatagridFooter>
+                            <Form Model="@model">
+                                <Textarea @bind-Value="@CommentInfo" style="resize:none;width:100%;height:100px;"></Textarea>
+                                <Button Variant="Primary" OnClick="AddComment">KOMMENTERA</Button>
+                            </Form>
+                        </div>
+
+                        <div style="width:49%;float:right;margin-right:6px;margin-bottom:6px;margin-top:12px;">
+                        </div>
+                        <cds-divider orientation="Horizontal"></cds-divider>
+                        <div cds-layout="Horizontal gap:md" style="width:49%;float:left">
+                            <br />
+                            <cds-textarea>
+                                <textarea disabled="@DisableEditTask" style="resize:none;margin-left:6px;margin-top:6px;width:95%;height:150px;" @bind="@taskItem.Description"></textarea>
+                            </cds-textarea>
+                            <br />
+                            <table class="table table-vertical" style="width:95%;margin-left:6px;margin-top:6px;">
+                                <tbody>
+                                    <tr>
+                                        <td style="width:25%">Ärendetitel</td>
+                                        <td><input maxlength="35" disabled="@DisableEditTask" type="text" style="resize:none;height:24px;" @bind="@taskItem.Title" /></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width:25%">Status</td>
+                                        <td>@taskItem.Status</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width:25%">Skapad</td>
+                                        <td>@taskItem.CreationDate.ToShortDateString() @taskItem.CreationDate.ToShortTimeString()</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width:25%">Startdatum</td>
+                                        <td><input disabled="@DisableEditTask" type="date" style="resize:none;height:24px;" @bind="@taskItem.StartDate" /></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width:25%">Slutdatum</td>
+                                        <td><input disabled="@DisableEditTask" type="date" style="resize:none;height:24px;" @bind="@taskItem.EndDate" /></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width:25%">Prioritet</td>
+                                        <td><Combobox Disabled="@DisableEditTask" Items="@priorities" @bind-SelectedItem="selectedPriority"></Combobox></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width:25%">Konsekvens</td>
+                                        <td><Combobox Disabled="@DisableEditTask" Items="@consequences" @bind-SelectedItem="selectedConsequence"></Combobox></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                        </div>
+                    </LayoutView>
+                </ChildContent>
+            </Tab>
+            <Tab>
+                <Header>ToDos</Header>
+                <ChildContent>
+                        
+                    <div style="width:49%;float:left;margin-left:6px;margin-bottom:6px;margin-top:12px;">
+                        <Datagrid TRowData="Todo" Items="todoList" style="height: 400px" RowClicked="(u) => RowClicked(u)" RowClass="DynamicRowClass" Placeholder="Här var det tomt!">
+                            <DatagridColumn TRowData="Todo" Field="u=> u.Title" CanSort="false" />
+                        </Datagrid>
+                        <DatagridFooter TRowData="Todo">
+                            <DatagridFooterDescription TRowData="Todo">@todoList.Count todos  </DatagridFooterDescription>
+                            <Button OnClick="e => CreateTodo()" style="float:right;margin-left:6px;margin-top:6px;">+</Button>
+                        </DatagridFooter>
+                    </div>
+
+                    <div hidden="@Hide" style="width:49%;float:right;margin-right:6px;margin-bottom:6px;margin-top:18px;">
+                        <cds-textarea>
+                            <textarea disabled="@DisableEdit" style="resize:none;margin-left:6px;margin-top:6px;width:95%;height:150px;" @bind="@todoItem.Description">@todoItem.Description</textarea>
+                        </cds-textarea>
+                        <br />
+                        <table class="table table-vertical" style="width:95%;margin-left:6px;margin-top:6px;">
+                            <tbody>
+                                <tr>
+                                    <td style="width:20%">Titel</td>
+
+                                    <td>
+                                        <input maxlength="35" disabled="@DisableEdit" type="text" style="resize:none;height:24px;" @bind="@todoItem.Title" />
+                                    </td>
+
+                                </tr>
+                                <tr>
+                                    <td style="width:25%">Status</td>
+                                    <td>
+                                        <textarea disabled style="resize:none;height:24px;" @bind="@todoItem.Status">
+                                            </textarea>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="width:25%">Startdatum</td>
+                                    <td>
+                                        <input disabled="@DisableEdit" type="date" style="resize:none;height:24px;" @bind="@todoItem.StartDate" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="width:25%">Slutdatum</td>
+                                    <td>
+                                        <input disabled="@DisableEdit" type="date" style="resize:none;height:24px;" @bind="@todoItem.EndDate">
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <Button style="float:right;margin-left:0px;margin-right:6px" Variant="Danger" Icon="warning-standard" OnClick="e => DeleteTodo()">Ta bort</Button>
+                        <Button hidden="@DisableEdit" style="float:right" Variant="Success" Icon="File" OnClick="e => SaveTodo()"> Spara </Button>
+                        <Button hidden="@HiddenEditButton" style="float:right" Variant="Primary" Icon="Edit" OnClick="e => EditTodo()"></Button>
+                        <Button style="float:right;" disabled="@HiddenEditButton" hidden="@ClosedButtonToDo" Icon="check" Variant="Success" OnClick="a => CloseOrReopenTodo()"></Button>
+                        <Button style="float:right;" disabled="@HiddenEditButton" hidden="@ReopenButtonToDo" Icon="refresh" Variant="Primary" OnClick="a => CloseOrReopenTodo()"></Button>
+                    </div>
+
+
+
+
+                </ChildContent>
+
+            </Tab>
+        </Tabs>
+        <div style="height:1000px"></div>
+    </CardBody>
+</Card>
+
+
+@code {
+
+    [Parameter]
+    public int Id { get; set; }
+    public string CommentInfo { get; set; }
+    private TaskItem taskItem = new TaskItem();
+    private List<TaskComment> taskCommentList = new List<TaskComment>();
+    private Todo todoItem = new Todo();
+    private List<Todo> todoList = new List<Todo>();
+    private string empty = "";
+    private string ownerEntityName = "";
+
+    string[] priorities = { "Ej Prio", "Låg", "Medel", "Hög", "Omedelbar" };
+    string selectedPriority;
+    string[] consequences = { "Ingen", "Låg", "Medel", "Hög", "Dödlig" };
+    string selectedConsequence;
+
+    //Task Bools
+    public bool DisableEditTask = true;
+    public bool HideTask = true;
+    public bool HiddenEditButtonTask = false;
+    public bool ModalMd = false;
+    public bool ClosedButtonTask = false;
+    public bool ReopenButtonTask = true;
+
+
+    //Todo bools
+    public bool DisableEdit = true;
+    public bool Hide = true;
+    public bool HiddenEditButton = false;
+    public bool ClosedButtonToDo = false;
+    public bool ReopenButtonToDo = true;
+
+    private TodoModel todoModel = new TodoModel();
+    private DemoBasicModel model = new DemoBasicModel();
+    public FixedMode Mode { get; set; } = FixedMode.All;
+    TaskComment GeneratedtaskComment = new TaskComment();
+
+    public string GenerateComment { get; set; }
+
+    public string UpdateIndex(TaskComment u)
+    {
+        GeneratedtaskComment = u;
+        return u.Comment;
+    }
+
+    public void CheckIfClosedTodo()
+    {
+        if (todoItem.Status != "Avklarad")
+        {
+            ClosedButtonToDo = false;
+            ReopenButtonToDo = true;
+        }
+        else
+        {
+            ClosedButtonToDo = true;
+            ReopenButtonToDo = false;
+        }
+    }
+
+    public void CheckIfClosed()
+    {
+        if (taskItem.Status != "Avklarad")
+        {
+            ClosedButtonTask = false;
+            ReopenButtonTask = true;
+        }
+        else
+        {
+            ClosedButtonTask = true;
+            ReopenButtonTask = false;
+        }
+    }
+
+    public async Task CloseOrReopenTodo()
+    {
+        Todo td = new Todo();
+        td.Id = todoItem.Id;
+        if (todoItem.Status != "Avklarad")
+        {
+            td.Status = "Avklarad";
+        }
+        else
+        {
+            if (todoItem.EndDate < DateTime.Now.AddDays(-1))
+            {
+                td.Status = "Försenad";
+            }
+            else
+            {
+                td.Status = "Aktiv";
+            }
+        }
+        await TodoDb.Update(td);
+        todoList = TodoDb.GetAllTodosByTaskId(taskItem.Id);
+        todoItem = (await TodoDb.GetByID(todoItem.Id));
+        CheckIfClosedTodo();
+        StateHasChanged();
+    }
+
+    public async Task CloseOrReopenTask()
+    {
+        TaskItem td = new TaskItem();
+        td.Id = taskItem.Id;
+        if (taskItem.Status != "Avklarad")
+        {
+            td.Status = "Avklarad";
+        }
+        else
+        {
+            if (taskItem.EndDate < DateTime.Now)
+            {
+                td.Status = "Försenad";
+            }
+            else
+            {
+                td.Status = "Aktiv";
+            }
+        }
+        await TaskDb.Update(td);
+        taskItem = (await TaskDb.GetByID(Id));
+        CheckIfClosed();
+        StateHasChanged();
+    }
+
+    public async Task DeleteTask()
+    {
+        await TaskDb.Delete(taskItem);
+        NavigationManager.NavigateTo($"FetchTask");
+    }
+
+    public async Task EditTask()
+    {
+        DisableEditTask = false;
+        HiddenEditButtonTask = true;
+    }
+
+    public async Task SaveTask()
+    {
+        DisableEditTask = true;
+        HiddenEditButtonTask = false;
+        TaskItem ti = new TaskItem();
+
+        ti.Title = taskItem.Title;
+        ti.Description = taskItem.Description;
+        ti.StartDate = taskItem.StartDate;
+        ti.EndDate = taskItem.EndDate;
+        ti.Status = taskItem.Status;
+        ti.Id = taskItem.Id;
+        ti.UpdateCount = taskItem.UpdateCount + 1;
+
+        if (selectedPriority == "Ej Prio")
+        {
+            ti.Priority = 1;
+        }
+        else if (selectedPriority == "Låg")
+        {
+            ti.Priority = 2;
+        }
+        else if (selectedPriority == "Medel")
+        {
+            ti.Priority = 3;
+        }
+        else if (selectedPriority == "Hög")
+        {
+            ti.Priority = 4;
+        }
+        else if (selectedPriority == "Omedelbar")
+        {
+            ti.Priority = 5;
+        }
+
+        if (selectedConsequence == "Ingen")
+        {
+            ti.Consequence = 1;
+        }
+        else if (selectedConsequence == "Låg")
+        {
+            ti.Consequence = 2;
+        }
+        else if (selectedConsequence == "Medel")
+        {
+            ti.Consequence = 3;
+        }
+        else if (selectedConsequence == "Hög")
+        {
+            ti.Consequence = 4;
+        }
+        else if (selectedConsequence == "Dödlig")
+        {
+            ti.Consequence = 5;
+        }
+
+        await TaskDb.Update(ti);
+        taskItem = (await TaskDb.GetByID(Id));
+        SetPriorityConsequence();
+        StateHasChanged();
+    }
+
+    public void SetPriorityConsequence()
+    {
+        selectedPriority = priorities[taskItem.Priority-1];
+        selectedConsequence = consequences[taskItem.Consequence-1];
+    }
+
+    public class TodoModel
+    {
+        public string Title { get; set; }
+        public string Description { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public string Status { get; set; }
+        public int Priority { get; set; } //How imprtant (1-5)
+        public int Consequence { get; set; } //How bad if not finished (1-5)
+    }
+
+    public void GenerateValues(string Comment)
+    {
+        GenerateComment = Comment;
+    }
+
+    public class DemoBasicModel
+    {
+        public string Name { get; set; }
+    }
+
+    public async Task AddComment()
+    {
+        TaskComment t = new TaskComment();
+        t.TaskID = taskItem.Id;
+        t.CreationDate = DateTime.Now;
+        t.Comment = CommentInfo;
+        await TaskCommentDb.Insert(t);
+        taskCommentList = TaskCommentDb.GetAllTaskCommentsByTaskId(taskItem.Id);
+        CommentInfo = "";
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        taskItem = (await TaskDb.GetByID(Id));
+        UpdateOwnerName();
+        taskCommentList = TaskCommentDb.GetAllTaskCommentsByTaskId(taskItem.Id);
+        todoList = TodoDb.GetAllTodosByTaskId(taskItem.Id);
+        todoItem = new Todo();
+        CheckIfClosed();
+        SetPriorityConsequence();
+    }
+
+    public async void UpdateOwnerName()
+    {
+        ownerEntityName = await TaskDb.GetOwnerName(taskItem);
+    }
+
+
+    public string DynamicRowClass(Todo row, int index)
+    {
+        // NOTE: row-selected class is a built-in datagrid class
+        return row == todoItem ? "row-selected" : "";
+    }
+
+    public void RowClicked(Blazority.Shared.MouseEventData<Todo> e)
+    {
+        if (DisableEdit)
+        {
+            todoItem = e.Data;
+            Hide = false;
+            CheckIfClosedTodo();
+        }
+    }
+
+    public async Task CreateTodo()
+    {
+        Todo toAdd = new Todo();
+        toAdd.Title = "Ny Todo";
+        toAdd.Description = "";
+        toAdd.StartDate = DateTime.Now;
+        toAdd.EndDate = DateTime.Now;
+        toAdd.Status = "Aktiv";
+        toAdd.TaskID = taskItem.Id;
+
+        await TodoDb.Insert(toAdd);
+        todoList = TodoDb.GetAllTodosByTaskId(taskItem.Id);
+
+        todoItem = todoList.Last();
+        EditTodo();
+        StateHasChanged();
+    }
+
+    public async Task DeleteTodo()
+    {
+        int index = todoList.FindIndex(a => a.Id == todoItem.Id);
+        await TodoDb.Delete(todoItem);
+
+        todoList = TodoDb.GetAllTodosByTaskId(taskItem.Id);
+
+        if (todoList.Count != 0)
+        {
+            if (todoList.Count == index)
+            {
+                index--;
+            }
+            todoItem = todoList[index];
+        }
+        else
+        {
+            Hide = true;
+        }
+
+        StateHasChanged();
+    }
+
+    public async Task SaveTodo()
+    {
+        DisableEdit = true;
+        HiddenEditButton = false;
+        Todo todo = new Todo();
+
+        todo.Title = todoItem.Title;
+        todo.Description = todoItem.Description;
+        todo.StartDate = todoItem.StartDate;
+        todo.EndDate = todoItem.EndDate;
+        todo.Status = todoItem.Status;
+        todo.TaskID = taskItem.Id;
+        todo.Id = todoItem.Id;
+
+        await TodoDb.Update(todo);
+
+        todoList = TodoDb.GetAllTodosByTaskId(taskItem.Id);
+        StateHasChanged();
+    }
+
+    public async Task EditTodo()
+    {
+        DisableEdit = false;
+        Hide = false;
+        HiddenEditButton = true;
+    }
+}

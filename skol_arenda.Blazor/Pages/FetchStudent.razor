@@ -1,0 +1,344 @@
+﻿@page "/fetchStudent"
+
+@using ITHSManagement.Models
+@using ITHSManagement.Services;
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Hosting
+@using Microsoft.AspNetCore.Components.Forms
+@using System.IO;
+@inject StudentRepository studentDb
+@inject ContactRepository contactDb
+@inject AddressRepository addressDb
+@inject UserRepository dbuser
+@inject IWebHostEnvironment env
+@inject FileIO context
+@inject NavigationManager NavigationManager
+
+
+<h1>
+    Studenter
+
+    <span style="float: right;">
+        <ButtonGroup>
+            <Button Variant="Outline" OnClick="e => ModalMd = true">LÄGG TILL</Button>
+            <Button Variant="Primary" OnClick="e => ExcelButtonOnClick()">Importera från excel</Button>
+        </ButtonGroup>
+    </span>
+</h1>
+
+<Datagrid TRowData="Student" Items="students" RowClicked="(u) => RowClicked(u)" RowClass="DynamicRowClass" Placeholder="För tillfället är det väldigt tomt här.">
+    <DatagridColumn Title="Förnamn" TRowData="Student" Field="c => c.FirstName" CanSort="true" />
+    <DatagridColumn Title="Efternamn" TRowData="Student" Field="c => c.LastName" CanSort="true" />
+    <DatagridColumn Title="Födelsedag" TRowData="Student" CanSort="false"> @context.Birthdate?.ToShortDateString()</DatagridColumn>
+    <DatagridFooter TRowData="Student">
+        <DatagridFooterDescription TRowData="Student">@students.Count studenter.</DatagridFooterDescription>
+    </DatagridFooter>
+</Datagrid>
+
+
+<Modal Open="ModalMd" Closable="false" StaticBackdrop="true">
+    <ModalTitle>Skapa Ny Student</ModalTitle>
+    <ModalBody>
+        <Form Model="@model">
+            <thead>
+                <tr>
+                    <td style="padding-right:20px">
+                        <Text Label="Förnamn" @bind-Value="model.FirstName" />
+                    </td>
+                    <td>
+                        <Text Label="Efternamn" @bind-Value="model.LastName" />
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <br />
+                        <Datepicker Label="Födelsedag" @bind-Value="model.BirthDate" />
+                    </td>
+                    <td>
+                        @*<Text InputType="TextInputType.Email" Label="Email" @bind-Value="model.Email" /> Kraschar*@
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <Text InputType="TextInputType.Tel" Label="Telefonnummer" @bind-Value="model.Phone" />
+                    </td>
+                    <td>
+                        <Text InputType="TextInputType.Text" Label="Gata" @bind-Value="model.Street" />
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <Text InputType="TextInputType.Text" Label="Postnummer" @bind-Value="model.Zipcode" />
+                    </td>
+                    <td>
+                        <Text InputType="TextInputType.Text" Label="Stad" @bind-Value="model.City" />
+                    </td>
+                </tr>
+            </thead>
+        </Form>
+    </ModalBody>
+
+    <ModalFooter>
+        <Button Variant="Outline" OnClick="e => ModalMd = false">Avbryt</Button>
+        <Button Variant="Primary" OnClick="e => AddStudent()">Skapa</Button>
+    </ModalFooter>
+</Modal>
+
+<Modal Open="ModalEx" Closable="false" StaticBackdrop="true">
+    <ModalTitle>Importera från Excel</ModalTitle>
+    <ModalBody>
+        <Form Model="@model">
+            <InputFile OnChange="OnInputFileChange" multiple />
+        </Form>
+
+        @if (DuplicatesDetected)
+        {
+            <Alert Type="AlertType.Danger" Closable="false">@removed studenter fanns redan i databasen och kommer inte läggas till.</Alert>
+        }
+
+        <Datagrid Items="studentExcel" Fixed="Mode" Placeholder="För tillfället är det väldigt tomt här." style="height: 400px">
+            <DatagridColumn Title="Förnamn" TRowData="ExcelStudent" Field="c => c.FirstName" CanSort="true" CanFilter="true" />
+            <DatagridColumn Title="Efternamn" TRowData="ExcelStudent" Field="c => c.LastName" CanSort="true" CanFilter="true" />
+            <DatagridColumn Title="Födelsedag" TRowData="ExcelStudent" Field="c => c.BirthDay" CanSort="true" />
+
+            <DatagridFooter TRowData="ExcelStudent">
+                <DatagridFooterDescription TRowData="ExcelStudent">
+                    @studentExcel.Count studenter att lägga till.
+                </DatagridFooterDescription>
+            </DatagridFooter>
+        </Datagrid>
+    </ModalBody>
+
+    <ModalFooter>
+        <Button Variant="Outline" OnClick="e => ModalEx = false">Avbryt</Button>
+        <Button Variant="Primary" OnClick="e => MassAddStudent()">Skapa</Button>
+    </ModalFooter>
+</Modal>
+
+
+@code {
+
+
+    public void RowClicked(Blazority.Shared.MouseEventData<Student> e)
+    {
+        LastClickedRow = e.Data;
+        NavigationManager.NavigateTo($"studentprofile/{e.Data.Id}");
+    }
+
+    //Modal code
+    public bool ModalMd { get; set; }
+    public bool ModalEx { get; set; }
+    private DemoBasicModel model = new DemoBasicModel();
+    public FixedMode Mode { get; set; } = FixedMode.All;
+    public int removed = 0;
+    bool DuplicatesDetected = false;
+
+    public void ExcelButtonOnClick()
+    {
+        DuplicatesDetected = false;
+        ModalEx = true;
+        studentExcel = new List<ExcelStudent>();
+        this.StateHasChanged();
+    }
+
+    public class DemoBasicModel
+    {
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+        public DateTime BirthDate { get; set; }
+        public string Email { get; set; }
+        public string Phone { get; set; }
+        public string Street { get; set; }
+        public string Zipcode { get; set; }
+        public string City { get; set; }
+
+    }
+
+    private List<Student> students = new List<Student>();
+    private Student student = new Student();
+
+
+    private async Task GetUsers()
+    {
+        students = (await studentDb.Get()).ToList();
+        this.StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        //    students = await Task.FromResult(studentDb
+        //    .Get(orderBy: q => q.OrderByDescending(x => x.FirstName))
+        //    .ToList());
+        await GetUsers();
+
+    }
+
+    public Student LastClickedRow { get; set; }
+
+    public string DynamicRowClass(Student row, int index)
+    {
+        // NOTE: row-selected class is a built-in datagrid class
+        return row == LastClickedRow ? "row-selected" : "";
+    }
+
+    private async Task AddStudent()
+    {
+        Student s = new Student();
+        s.FirstName = model.FirstName;
+        s.LastName = model.LastName;
+        s.Birthdate = model.BirthDate;
+
+        await studentDb.Insert(s);
+
+        if (model.Email != null)
+        {
+            ContactInfo contact = new ContactInfo();
+            contact.UserId = s.Id;
+            contact.ContactType = ContactTypeEnum.Epost;
+            contact.Contact = model.Email;
+
+            await contactDb.Insert(contact);
+        }
+        if (model.Phone != null)
+        {
+            ContactInfo contact = new ContactInfo();
+            contact.UserId = s.Id;
+            contact.ContactType = ContactTypeEnum.Telefon;
+            contact.Contact = model.Phone;
+
+            await contactDb.Insert(contact);
+        }
+
+        if (model.Street != null && model.Zipcode != null && model.City != null)
+        {
+            Address address = new Address();
+
+            address.UserId = s.Id;
+
+            address.City = model.City;
+            address.ZipCode = model.Zipcode;
+            address.Street = model.Street;
+
+            await addressDb.Insert(address);
+        }
+
+
+
+        ModalMd = false;
+
+        await GetUsers();
+    }
+
+    string Message = "No file selected";
+    IReadOnlyList<IBrowserFile> selectedFiles;
+
+    List<ExcelStudent> studentExcel = new List<ExcelStudent>();
+
+    async void OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        selectedFiles = e.GetMultipleFiles();
+        Message = $"{selectedFiles.Count} file selected";
+        await PreviewList();
+        this.StateHasChanged();
+    }
+
+    async Task PreviewList()
+    {
+        if (selectedFiles != null)
+        {
+            foreach (var file in selectedFiles)
+            {
+                //Behövs för filstorlek
+                Stream stream = file.OpenReadStream(10140555, default);
+                var path = $"{env.WebRootPath}\\db.xlsx";
+                FileStream fs = File.Create(path);
+                await stream.CopyToAsync(fs);
+                stream.Close();
+                fs.Close();
+            }
+
+            Message = $"{selectedFiles.Count} file uploaded to server";
+            this.StateHasChanged();
+
+            IExcelStudent excelStudent = new IExcelStudent();
+            studentExcel = excelStudent.MassImportStudent();
+            studentExcel.RemoveAll(c => c.Status != "Studerande");
+            students = (await studentDb.Get()).ToList();
+            removed = 0;
+
+            foreach (var student in students)
+            {
+
+                removed = removed + (studentExcel.RemoveAll(x => x.FirstName == student.FirstName && x.LastName == student.LastName && DateTime.Parse(x.BirthDay) == student.Birthdate));
+
+            }
+
+            if (removed > 0)
+            {
+                DuplicatesDetected = true;
+            }
+
+            this.StateHasChanged();
+        }
+    }
+
+    async void MassAddStudent()
+    {
+        foreach (ExcelStudent toAdd in studentExcel)
+        {
+            await AddOneStudent(toAdd);
+        }
+
+        ModalEx = false;
+
+        await GetUsers();
+    }
+
+    private async Task AddOneStudent(ExcelStudent toAdd)
+    {
+        if (toAdd.Status == "Studerande" && toAdd.FirstName != null && toAdd.LastName != null && toAdd.BirthDay != null)
+        {
+            Student s = new Student();
+            s.FirstName = toAdd.FirstName;
+            s.LastName = toAdd.LastName;
+            DateTime birthday = DateTime.Parse(toAdd.BirthDay);
+            //DateTime birthday = DateTime.ParseExact(toAdd.BirthDay,"yyyyMMdd",null);
+            birthday.ToUniversalTime();
+            s.Birthdate = birthday;
+
+            await studentDb.Insert(s);
+
+            if (toAdd.Email != null)
+            {
+                ContactInfo contact = new ContactInfo();
+                contact.UserId = s.Id;
+                contact.ContactType = ContactTypeEnum.Epost;
+                contact.Contact = toAdd.Email;
+
+                await contactDb.Insert(contact);
+            }
+            if (toAdd.Phone != null)
+            {
+                ContactInfo contact = new ContactInfo();
+                contact.UserId = s.Id;
+                contact.ContactType = ContactTypeEnum.Telefon;
+                contact.Contact = toAdd.Phone;
+
+                await contactDb.Insert(contact);
+            }
+
+            if (toAdd.Street != null && toAdd.Zipcode != null && toAdd.City != null)
+            {
+                Address address = new Address();
+
+                address.UserId = s.Id;
+
+                address.City = toAdd.City;
+                address.ZipCode = toAdd.Zipcode;
+                address.Street = toAdd.Street;
+
+                await addressDb.Insert(address);
+            }
+        }
+    }
+}

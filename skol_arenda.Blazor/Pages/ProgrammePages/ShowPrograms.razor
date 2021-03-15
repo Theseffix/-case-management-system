@@ -1,0 +1,112 @@
+﻿@page "/showprograms"
+@using ITHSManagement.Services
+@using ITHSManagement.Models
+@inject NavigationManager NavigationManager
+@inject IProgrammeService context
+<h1>
+    Utbildningar
+    <span style="float: right;">
+        <Button Variant="Primary" @onclick="(() => AddProgramModal = true)">Lägg till Utbildning</Button>
+    </span>
+</h1>
+
+
+@if (programmes != null)
+{
+    @if (LastClickedRow != null)
+    {
+        <Alert Type="AlertType.Info" Closable="false">Row (ID: @LastClickedRow.Id, Name: @LastClickedRow.ProgramName) was clicked.</Alert>
+    }
+
+    
+        <Datagrid TRowData="Programme" Items="programmes" RowClicked="(u) => RowClicked(u)" RowClass="DynamicRowClass" Placeholder="För tillfället är det väldigt tomt här.">
+            <DatagridColumn Title="Id" TRowData="Programme" Field="c => c.Id" CanSort="true" />
+            <DatagridColumn Title="Namn" TRowData="Programme" Field="c => c.ProgramName" CanSort="true" />
+
+            <DatagridColumn TRowData="Programme" Title="YH-Nummer" Field="c => c.YhNumber" CanSort="true">
+                @context.YhNumber
+            </DatagridColumn>
+
+            <DatagridColumn TRowData="Programme" Title="Skapad">@context.StartDate?.ToShortDateString()</DatagridColumn>
+
+            <DatagridFooter TRowData="Programme">
+                <DatagridFooterDescription TRowData="Programme">@programmes.Count program.</DatagridFooterDescription>
+            </DatagridFooter>
+        </Datagrid>
+    <Modal Open="AddProgramModal" Closable="false">
+        <ModalTitle>Lägg Till Utbildning</ModalTitle>
+        <ModalBody>
+            <EditForm Model="programme">
+                <Text @bind-Value="programme.ProgramName" Label="Utbildningsnamn"></Text>
+                <Text @bind-Value="programme.YhNumber" Label="YH-Nummer"></Text>
+                <Text @bind-Value="programme.Description" Label="Beskrivning"></Text>
+                <clr-input-container class="clr-form-control clr-row " blazority="">
+                    <label class="clr-control-label clr-col-12 clr-col-md-2" for="clr-date-1">Startdatum</label>
+                    <div class="clr-control-container clr-col-md-10 clr-col-12 ">
+                        <InputDate id="clr-date-1" class="clr-input valid" @bind-Value=programme.StartDate ParsingErrorMessage="Must be a date" />
+                    </div>
+                </clr-input-container>
+                <clr-input-container class="clr-form-control clr-row " blazority="">
+                    <label class="clr-control-label clr-col-12 clr-col-md-2" for="clr-date-2">Slutdatum</label>
+                    <div class="clr-control-container clr-col-md-10 clr-col-12 ">
+                        <InputDate id="clr-date-2" class="clr-input valid" @bind-Value=programme.EndDate ParsingErrorMessage="Must be a date" />
+                    </div>
+                </clr-input-container>
+            </EditForm>
+        </ModalBody>
+        <ModalFooter>
+            <Button Variant="Outline" OnClick="UpdateModal">Avbryt</Button>
+            <Button Variant="Primary" OnClick="AddNewProgram">Lägg Till</Button>
+        </ModalFooter>
+    </Modal>
+
+}
+else
+{
+    <Spinner>Loading...</Spinner>
+}
+
+@code {
+    public Programme LastClickedRow { get; set; }
+
+    public void RowClicked(Blazority.Shared.MouseEventData<Programme> e)
+    {
+        LastClickedRow = e.Data;
+        NavigationManager.NavigateTo($"programme/{e.Data.Id}");
+
+    }
+    private void UpdateModal()
+    {
+        AddProgramModal = false;
+    }
+
+    public string DynamicRowClass(Programme row, int index)
+    {
+        // NOTE: row-selected class is a built-in datagrid class
+        return row == LastClickedRow ? "row-selected" : "";
+    }
+
+
+    public bool AddProgramModal { get; set; }
+    private Programme programme = new Programme();
+    private List<Programme> programmes;
+
+
+    private void Modal(Programme p)
+    {
+        this.programme = p;
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        programmes = (await context.Get()).ToList();
+
+    }
+    private async Task AddNewProgram()
+    {   
+        UpdateModal();
+        await context.Insert(programme);
+        programmes = (await context.Get()).ToList();
+        StateHasChanged();
+        programme = new Programme();
+    }
+}

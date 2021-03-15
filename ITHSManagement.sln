@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30717.126
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ITHSManagement", "skol_arenda.Blazor\ITHSManagement.csproj", "{C5584D76-3DE7-49F5-8CF6-216E33957BF0}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "skol_arenda.Tests", "skol_arenda.Tests\skol_arenda.Tests.csproj", "{3942736B-5812-4169-87F8-C7C4BFF9CA3B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C5584D76-3DE7-49F5-8CF6-216E33957BF0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5584D76-3DE7-49F5-8CF6-216E33957BF0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5584D76-3DE7-49F5-8CF6-216E33957BF0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C5584D76-3DE7-49F5-8CF6-216E33957BF0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3942736B-5812-4169-87F8-C7C4BFF9CA3B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3942736B-5812-4169-87F8-C7C4BFF9CA3B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3942736B-5812-4169-87F8-C7C4BFF9CA3B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3942736B-5812-4169-87F8-C7C4BFF9CA3B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {49D438A4-CFD9-4277-981C-9E51996A3CBD}
+	EndGlobalSection
+EndGlobal

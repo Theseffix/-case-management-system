@@ -1,0 +1,114 @@
+﻿@page "/courses"
+@using ITHSManagement.Services
+@using ITHSManagement.Models
+@inject NavigationManager NavigationManager
+@inject CourseService context
+
+<h1>Kurser
+    <span style="float:right;"><Button Variant="Primary" @onclick="(() => AddCourseModal = true)">Lägg till kurs</Button></span>
+</h1>
+
+
+@if (courses != null)
+{
+    @if (LastClickedRow != null)
+    {
+        <Alert Type="AlertType.Info" Closable="false">Row (ID: @LastClickedRow.Id, Name: @LastClickedRow.CourseName) was clicked.</Alert>
+    }
+
+    <Datagrid TRowData="Course" Items="courses" RowClicked="(u) => RowClicked(u)" RowClass="DynamicRowClass" Placeholder="För tillfället är det väldigt tomt här.">
+        <DatagridColumn Title="Id" TRowData="Course" Field="c => c.Id" CanSort="true" />
+        <DatagridColumn Title="Titel" TRowData="Course" Field="c => c.CourseName" CanSort="true" />
+
+        <DatagridColumn TRowData="Course" Title="Poäng" Field="c => c.Points" CanSort="true" />
+        <DatagridColumn TRowData="Course" Title="Startdatum">@context.StartDate.ToShortDateString()</DatagridColumn>
+        <DatagridColumn TRowData="Course" Title="Slutdatum">@context.EndDate.ToShortDateString()</DatagridColumn>
+        <DatagridColumn TRowData="Course" Title="Avvikande Period" />
+        <DatagridFooter TRowData="Course">
+            <DatagridFooterDescription TRowData="Course">@courses.Count kurser.</DatagridFooterDescription>
+        </DatagridFooter>
+    </Datagrid>
+}
+else
+{
+    <Spinner>Loading...</Spinner>
+}
+
+<Modal Open="AddCourseModal" Closable="false">
+    <ModalTitle>Lägg Till Kurs</ModalTitle>
+    <ModalBody>
+        <EditForm Model="@Course" class="clr-form clr-form-compact">
+            <Text @bind-Value="Course.CourseName" Label="Kursnamn"></Text>
+            <Number @bind-Value="Course.Points" Label="Poäng"></Number>
+            <Text @bind-Value="Course.Description" Label="Beskrivning"></Text>
+            <clr-input-container class="clr-form-control clr-row " blazority="">
+                <label class="clr-control-label clr-col-12 clr-col-md-2" for="clr-date-1">Startdatum</label>
+                <div class="clr-control-container clr-col-md-10 clr-col-12 ">
+                    <InputDate id="clr-date-1" class="clr-input valid" @bind-Value=Course.StartDate ParsingErrorMessage="Must be a date" />
+                </div>
+            </clr-input-container>
+            <clr-input-container class="clr-form-control clr-row " blazority="">
+                <label class="clr-control-label clr-col-12 clr-col-md-2" for="clr-date-2">Slutdatum</label>
+                <div class="clr-control-container clr-col-md-10 clr-col-12 ">
+                    <InputDate id="clr-date-2" class="clr-input valid" @bind-Value=Course.EndDate ParsingErrorMessage="Must be a date" />
+                </div>
+            </clr-input-container>
+            <Datepicker @bind-Value="Course.StartDeviation" Label="Start Avikelse"></Datepicker>
+            <Datepicker @bind-Value="Course.EndDeviation" Label="Slut Avikelse"></Datepicker>
+            <Text @bind-Value="Course.DeviationDescription" Label="Beskrivning"></Text>
+            
+        </EditForm>
+    </ModalBody>
+    <ModalFooter>
+        <Button Variant="Outline" OnClick="UpdateModal">Avbryt</Button>
+        <Button Variant="Primary" OnClick="AddNewCourse">Lägg Till</Button>
+    </ModalFooter>
+</Modal>
+
+
+@code {
+
+    public bool AddCourseModal { get; set; }
+
+    public Course LastClickedRow { get; set; }
+
+    private void UpdateModal()
+    {
+
+        AddCourseModal = false;
+    }
+
+    public void RowClicked(Blazority.Shared.MouseEventData<Course> e)
+    {
+        LastClickedRow = e.Data;
+        NavigationManager.NavigateTo($"course/{e.Data.Id}");
+
+    }
+
+    public string DynamicRowClass(Course row, int index)
+    {
+        // NOTE: row-selected class is a built-in datagrid class
+        return row == LastClickedRow ? "row-selected" : "";
+    }
+
+
+    private Course Course = new Course();
+
+    private List<Course> courses;
+
+    private async Task AddNewCourse()
+    {   
+        UpdateModal();
+        await context.Insert(Course);
+        courses = (await context.Get()).ToList();
+        StateHasChanged();
+        Course = new Course();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        courses = (await context.Get()).ToList();
+
+    }
+
+}
